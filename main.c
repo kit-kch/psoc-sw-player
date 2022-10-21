@@ -238,7 +238,7 @@ void spi_setup(enum SPI_PRESCALER_ENUM prsc, uint8_t clock_mode, uint8_t rxtx_si
   data_size = rxtx_size - 1;
   neorv32_uart0_printf("\n+ New SPI data size = %u-byte(s)\n\n", rxtx_size);
 
-  neorv32_spi_setup(prsc, clk_phase, clk_pol, data_size);
+  neorv32_spi_setup(prsc, clk_phase, clk_pol, data_size, 0);
   spi_configured = 1; // SPI is configured now
   spi_size = rxtx_size;
 }
