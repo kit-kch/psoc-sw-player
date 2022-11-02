@@ -42,7 +42,8 @@
 #include <neorv32.h>
 #include <stdbool.h>
 #include "bsp_psoc_board.h"
-
+#include "i2s_regs.h"
+#include "sin_buf.h"
 
 /**********************************************************************//**
  * @name User configuration
@@ -152,6 +153,12 @@ int main() {
   /** SD Card test */
   sd_card_test();
 
+  /** I2S module configuration */
+  neorv32_uart0_print("Configuring i2s:\n");
+  I2S_REG_CTRL0 |= CTRL0_RST | CTRL0_I2S_EN | CTRL0_DAC_BUILTIN | CTRL0_DAC_EN;
+  I2S_REG_CTRL0 &= ~(CTRL0_RST);
+  neorv32_uart0_printf("    fifo level: %d status: %x  control: %x\n", I2S_REG_LEVEL, I2S_REG_STAT0, I2S_REG_CTRL0);
+
   /** GPIO and LED tests:
    * - Output log message when button is pressed
    * - Switch on and off LEDs
@@ -162,7 +169,8 @@ int main() {
       // Debounce delay
       neorv32_cpu_delay_ms(100);
 
-      neorv32_pwm_set(PWM_LED_CH, led_val++);
+      neorv32_pwm_set(PWM_LED_CH, led_val);
+      led_val += 20;
 
       // Buttons check
       if(check_button_clicked(BUTTON_UP)) {neorv32_uart0_print("UP button clicked\n"); }
@@ -180,6 +188,17 @@ int main() {
       // Test ASIC audio lines
       neorv32_gpio_pin_toggle(ASIC_AUDIO_LEFT);
       neorv32_gpio_pin_toggle(ASIC_AUDIO_RIGHT);
+
+      // Sine generation
+      for (size_t i = 0; i < sin_buf_len; i++)
+      {
+          // Wait till there's space in the FIFO
+          while(I2S_REG_STAT0 & STAT0_FIFO_FULL)
+          {}
+
+          I2S_REG_AUDIOL = sin_buf[i];
+          I2S_REG_AUDIOR = sin_buf[i] | AUDIO_COMMIT;
+      }
   }
   return 0;
 }
