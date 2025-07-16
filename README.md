@@ -1,22 +1,19 @@
-# PSoC Extension PCB Test
+# PSoC FMC PCB (psoc-pcb-fmc) Boardtest
 
-This repository contains small software to test the PSoC extension PCB.
-
-## Using the Repository
-
-For dependencies and paths to be setup correctly, this repo should not be checked out manually.
-It is checked out as part of the `psoc_soc` repository in its `ext` folder instead.
+This repository contains a small firmware to test the PSoC extension PCB.
 
 ## Compiling the Software
 
-If the repo was checked out as part of `psoc_soc`, there are two options to build the software:
-* Use the rules in the top-level Makefile, e.g. `make boardtest`.
-* Make sure to setup the environment, then `cd` into the source folder and use the local Makefile:
-  ```bash
-  source script/sw/sw_env.sh
-  cd ext/psoc_boardtest_sw
-  # Generate executable for bootloader
-  make exe
-  # Remove all generated files
-  make clean
-  ```
+Make sure to setup the compiler first. The currently tested version is [xPack GNU RISC-V Embedded GCC v14.2.0-3](https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/tag/v14.2.0-3).
+
+To compile, `cd` into the source folders and use the Makefile:
+```bash
+# To set up the compiler at ITIV, otherwise do that manually
+source /tools/psoc/psoc.sh riscv
+# Generate executable for gdb
+make elf
+# Remove all generated files
+make clean_all
+```
+
+For flashing, refer to the [psoc-soc instructions](https://github.com/kit-kch/psoc-soc/).
