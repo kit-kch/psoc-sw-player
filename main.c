@@ -1,207 +1,6 @@
-// #################################################################################################
-// # << NEORV32 - Blinking LED Demo Program >>                                                     #
-// # ********************************************************************************************* #
-// # BSD 3-Clause License                                                                          #
-// #                                                                                               #
-// # Copyright (c) 2021, Stephan Nolting. All rights reserved.                                     #
-// #                                                                                               #
-// # Redistribution and use in source and binary forms, with or without modification, are          #
-// # permitted provided that the following conditions are met:                                     #
-// #                                                                                               #
-// # 1. Redistributions of source code must retain the above copyright notice, this list of        #
-// #    conditions and the following disclaimer.                                                   #
-// #                                                                                               #
-// # 2. Redistributions in binary form must reproduce the above copyright notice, this list of     #
-// #    conditions and the following disclaimer in the documentation and/or other materials        #
-// #    provided with the distribution.                                                            #
-// #                                                                                               #
-// # 3. Neither the name of the copyright holder nor the names of its contributors may be used to  #
-// #    endorse or promote products derived from this software without specific prior written      #
-// #    permission.                                                                                #
-// #                                                                                               #
-// # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS   #
-// # OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF               #
-// # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE    #
-// # COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,     #
-// # EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE #
-// # GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED    #
-// # AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING     #
-// # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED  #
-// # OF THE POSSIBILITY OF SUCH DAMAGE.                                                            #
-// # ********************************************************************************************* #
-// # The NEORV32 Processor - https://github.com/stnolting/neorv32              (c) Stephan Nolting #
-// #################################################################################################
-
-
-/**********************************************************************//**
- * @file blink_led/main.c
- * @author Stephan Nolting
- * @brief Simple blinking LED demo program using the lowest 8 bits of the GPIO.output port.
- **************************************************************************/
 
 #include <neorv32.h>
-#include <stdbool.h>
-#include "bsp_psoc_board.h"
-#include "i2s_regs.h"
-#include "sin_buf.h"
-
-/**********************************************************************//**
- * @name User configuration
- **************************************************************************/
-/**@{*/
-/** UART BAUD rate */
-#define BAUD_RATE 19200
-/**@}*/
-
-// Global variables
-uint32_t spi_configured;
-uint32_t spi_size; // data quantity in bytes
-
-/** SPI Prescalers */
-enum SPI_PRESCALER_ENUM{
-    SPI_PRESC_2    = 0,
-    SPI_PRESC_4    = 1,
-    SPI_PRESC_8    = 2,
-    SPI_PRESC_64   = 3,
-    SPI_PRESC_128  = 4,
-    SPI_PRESC_1024 = 5,
-    SPI_PRESC_2048 = 6,
-    SPI_PRESC_4096 = 7,
-};
-
-// Prototypes
-void sd_card_test(void);
-void oled_display_test(void);
-bool check_button_clicked(int pin);
-void spi_setup(enum SPI_PRESCALER_ENUM prsc, uint8_t clock_mode, uint8_t rxtx_size);
-uint32_t hexstr_to_uint(char *buffer, uint8_t length);
-void aux_print_hex_byte(uint8_t byte);
-
-
-/**********************************************************************//**
- * SPI flash commands
- **************************************************************************/
-enum SPI_FLASH_CMD {
-  SPI_FLASH_CMD_WRITE    = 0x02, /**< Write data */
-  SPI_FLASH_CMD_READ     = 0x03, /**< Read data */
-  SPI_FLASH_CMD_READ_SR  = 0x05, /**< Get status register */
-  SPI_FLASH_CMD_WREN     = 0x06  /**< Enable write access */
-};
-
-
-/**********************************************************************//**
- * Tests peripherals of the PSoC board
- *
- * @note This program requires the GPIO, PWM, TWI and SPI controller to be synthesized (the UART is optional).
- *
- * @return 0 if execution was successful
- **************************************************************************/
-int main() {
-
-  // init UART (primary UART = UART0; if no id number is specified the primary UART is used) at default baud rate, no parity bits, ho hw flow control
-  neorv32_uart0_setup(BAUD_RATE, PARITY_NONE, FLOW_CONTROL_NONE);
-
-  // check if GPIO unit is implemented at all
-  if (neorv32_gpio_available() == 0) {
-    neorv32_uart0_print("Error! No GPIO unit synthesized!\n");
-    return 1; // nope, no GPIO unit synthesized
-  }
-
-  // check if TWI unit is implemented at all
-  if (neorv32_twi_available() == 0) {
-    neorv32_uart0_printf("No TWI unit implemented.");
-    return 1;
-  }
-
-  // check if SPI unit is implemented at all
-  if (neorv32_spi_available() == 0) {
-    neorv32_uart0_printf("No SPI unit implemented.");
-    return 1;
-  }
-
-  // check if SPI unit is implemented at all
-  if (neorv32_pwm_available() == 0) {
-    neorv32_uart0_printf("No PWM unit implemented.");
-    return 1;
-  }
-
-
-  // capture all exceptions and give debug info via UART
-  // this is not required, but keeps us safe
-  neorv32_rte_setup();
-
-  // say hello
-  neorv32_uart0_print("PSoC Board demo program\n");
-
-  /** Init PWM */
-  neorv32_pwm_setup(CLK_PRSC_1024);
-  neorv32_pwm_enable();
-  neorv32_pwm_set(PWM_LED_CH, 50);
-
-  /* Init SPI */
-  spi_setup(SPI_PRESC_2, 0, 1);
-
-  /* Init TWI */
-  neorv32_twi_setup(CLK_PRSC_2048);
-  neorv32_twi_enable();
-
-  /** I2C Display test: read I2C address of the display and maybe some ID
-   * and then check the ID
-   */
-  oled_display_test();
-
-  /** SD Card test */
-  sd_card_test();
-
-  /** I2S module configuration */
-  neorv32_uart0_print("Configuring i2s:\n");
-  I2S_REG_CTRL0 |= CTRL0_RST | CTRL0_I2S_EN | CTRL0_DAC_BUILTIN | CTRL0_DAC_EN;
-  I2S_REG_CTRL0 &= ~(CTRL0_RST);
-  neorv32_uart0_printf("    fifo level: %d status: %x  control: %x\n", I2S_REG_LEVEL, I2S_REG_STAT0, I2S_REG_CTRL0);
-
-  /** GPIO and LED tests:
-   * - Output log message when button is pressed
-   * - Switch on and off LEDs
-   */
-  neorv32_gpio_pin_set(LED_D2);
-  uint8_t led_val = 0;
-  while(1) {
-      // Debounce delay
-      neorv32_cpu_delay_ms(100);
-
-      neorv32_pwm_set(PWM_LED_CH, led_val);
-      led_val += 20;
-
-      // Buttons check
-      if(check_button_clicked(BUTTON_UP)) {neorv32_uart0_print("UP button clicked\n"); }
-      if(check_button_clicked(BUTTON_DOWN)) {neorv32_uart0_print("DOWN button clicked\n"); }
-      if(check_button_clicked(BUTTON_LEFT)) {neorv32_uart0_print("LEFT button clicked\n"); }
-      if(check_button_clicked(BUTTON_RIGHT)) {neorv32_uart0_print("RIGHT button clicked\n"); }
-      if(check_button_clicked(BUTTON_CENTER)) {neorv32_uart0_print("CENTER button clicked\n"); }
-      if(check_button_clicked(BUTTON_SW2)) {neorv32_uart0_print("SW2 button clicked\n"); }
-      if(check_button_clicked(BUTTON_SW3)) {neorv32_uart0_print("SW3 button clicked\n"); }      
-
-      // Switch LEDs
-      neorv32_gpio_pin_toggle(LED_D2);
-      neorv32_gpio_pin_toggle(LED_D3);
-
-      // Test ASIC audio lines
-      neorv32_gpio_pin_toggle(ASIC_AUDIO_LEFT);
-      neorv32_gpio_pin_toggle(ASIC_AUDIO_RIGHT);
-
-      // Sine generation
-      for (size_t i = 0; i < sin_buf_len; i++)
-      {
-          // Wait till there's space in the FIFO
-          while(I2S_REG_STAT0 & STAT0_FIFO_FULL)
-          {}
-
-          I2S_REG_AUDIOL = sin_buf[i];
-          I2S_REG_AUDIOR = sin_buf[i] | AUDIO_COMMIT;
-      }
-  }
-  return 0;
-}
+#include "psoc_board.h"
 
 /**
  * Checks button click condition 
@@ -221,181 +20,235 @@ bool check_button_clicked(int pin){
     return false;
 }
 
-/**
- * Setup SPI module
- * 
- * @arg prsc - prescaler, value from SPI_PRESCALER_ENUM enumeration
- * @arg clock_mode - SPI clock mode 0x00 .. 0x03 (CPHA and CPOL bits)
- * @arg rxtx_size - SPI transfer size: (1,2,3,4)
- */
-void spi_setup(enum SPI_PRESCALER_ENUM prsc, uint8_t clock_mode, uint8_t rxtx_size) {
 
-  uint8_t clk_phase, clk_pol, data_size;
-
-  // ---- SPI clock ----
-  uint32_t div = 0;
-  switch (prsc) {
-    case SPI_PRESC_2: div = 2 * 2; break;
-    case SPI_PRESC_4: div = 2 * 4; break;
-    case SPI_PRESC_8: div = 2 * 8; break;
-    case SPI_PRESC_64: div = 2 * 64; break;
-    case SPI_PRESC_128: div = 2 * 128; break;
-    case SPI_PRESC_1024: div = 2 * 1024; break;
-    case SPI_PRESC_2048: div = 2 * 2048; break;
-    case SPI_PRESC_4096: div = 2 * 4096; break;
-    default: div = 0; break;
-  }
-  uint32_t clock = NEORV32_SYSINFO.CLK / div;
-  neorv32_uart0_printf("\n+ SPI clock speed = %u Hz\n", clock);
-
-  // ---- SPI clock mode ----
-  clk_pol   = (uint8_t)((clock_mode >> 1) & 0x01);
-  clk_phase = (uint8_t)(clock_mode & 0x01);
-  neorv32_uart0_printf("\n+ SPI clock mode = %u\n", clock_mode);
-
-  // ---- SPI transfer data quantity ----
-  data_size = rxtx_size - 1;
-  neorv32_uart0_printf("\n+ New SPI data size = %u-byte(s)\n\n", rxtx_size);
-
-  neorv32_spi_setup(prsc, clk_phase, clk_pol, data_size, 0);
-  spi_configured = 1; // SPI is configured now
-  spi_size = rxtx_size;
+static void test_rst_button()
+{
+    neorv32_uart0_printf("* SW Button Test:\n");
+    neorv32_uart0_printf("  => Press SW2 now. It's working if the SoC resets\n");
 }
 
-/**
- * Set SD-Card in SPI mode and check response according to:
- * https://www.st.com/resource/en/application_note/an5595-spc58xexspc58xgx-multimedia-card-via-spi-interface-stmicroelectronics.pdf
- */
-void sd_card_test(void){
-    uint8_t channel = SD_CS_CHANNEL;
+static void test_button(char* name, int gpio)
+{
+    neorv32_uart0_printf("  => Press & hold %s\n", name);
+    while (neorv32_gpio_pin_get(gpio)){}
+    neorv32_uart0_printf("  => Release %s\n", name);
+    while (!neorv32_gpio_pin_get(gpio)){}
+}
 
-    // SD must be deselected during this
-    neorv32_uart0_printf("Syncing SD Card Clock...\n");
-    for(uint8_t i = 0; i < 10; i++)
-        neorv32_spi_trans(0xFF);
+static void test_buttons()
+{
+    neorv32_uart0_printf("* Button Test:\n");
+    test_button("Joystick LEFT", PSOC_BTN_L);
+    test_button("Joystick UP", PSOC_BTN_U);
+    test_button("Joystick RIGHT", PSOC_BTN_R);
+    test_button("Joystick DOWN", PSOC_BTN_D);
+    test_button("Joystick CENTER", PSOC_BTN_C);
+    test_button("SW1", PSOC_BTN_SW1);
+    neorv32_uart0_printf("  => [OK]\n");
+}
 
-    neorv32_uart0_printf("Sending CMD0 to SD Card...\n");
-
-    neorv32_spi_cs_en(channel);
-    neorv32_spi_trans(0x40);
-    neorv32_spi_trans(0x00);
-    neorv32_spi_trans(0x00);
-    neorv32_spi_trans(0x00);
-    neorv32_spi_trans(0x00);
-    neorv32_spi_trans(0x95);
-    neorv32_spi_cs_dis(channel);
-    neorv32_cpu_delay_ms(1);
-
-    neorv32_spi_cs_en(channel);
-    uint8_t resp = 0xFF;
-    for (size_t i = 0; i < 8; i++)
+static void test_uart()
+{
+    neorv32_uart0_printf("* UART Test:\n");
+    neorv32_uart0_printf("  => TX is working if you can read this\n");
+    neorv32_uart0_printf("  => RX test: enter 1\n");
+    char c = neorv32_uart0_getc();
+    if (c != '1')
     {
-      resp = neorv32_spi_trans(0x00);
-      if (resp != 0xFF)
-        break;
+        neorv32_uart0_printf("  => Wrong character '%c'\n", c);
+        neorv32_uart0_printf("  => [FAIL]\n");
     }
-    neorv32_spi_cs_dis(channel);
-    
-    if(resp == 0x01){
-        neorv32_uart0_printf("[OK] SD Card response 0x01 (IDLE_STATE).\n");
-    } else {
-        neorv32_uart0_printf("[ERROR] SD Card response %u: wrong response.\n", resp);
+    else
+    {
+        neorv32_uart0_printf("  => [OK]\n");
     }
 }
 
-/**
- * Write two commands: set display on (0xAF) and then set entire display on (0xA5)
- * @ref https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
- */
-void oled_display_test(void){
-    int nack = 0;
-    /** Switch display on (0xAF) */
+static void spin_cpu_timer(uint32_t seconds)
+{
+    uint64_t timeout = neorv32_clint_time_get() + (uint64_t)(seconds * NEORV32_SYSINFO->CLK);
+    while (neorv32_clint_time_get() < timeout)
+    {
+    }
+}
+
+static void test_led()
+{
+    neorv32_uart0_printf("* LED Test:\n");
+    neorv32_uart0_printf("  => D2 on for five seconds\n");
+    neorv32_gpio_pin_set(PSOC_LED2, 1);
+    spin_cpu_timer(5);
+    neorv32_uart0_printf("  => D2 off\n");
+    neorv32_gpio_pin_set(PSOC_LED2, 0);
+    neorv32_gpio_pin_set(PSOC_LED3, 1);
+    neorv32_uart0_printf("  => D3 on for five seconds\n");
+    spin_cpu_timer(5);
+    neorv32_uart0_printf("  => D3 off\n");
+    neorv32_gpio_pin_set(PSOC_LED3, 0);
+
+    neorv32_uart0_printf("  => [DONE]\n");
+}
+
+static void test_sd_card()
+{
+    neorv32_uart0_printf("* SD Card Test:\n  => Not implemented\n  => [SKIPPED]\n");
+}
+
+// Or (0x3D), << 1
+#define OLED_DISP_ADDRESS (0x3C)
+
+static int oled_send_cmd(uint8_t cmd)
+{
     neorv32_twi_generate_start();
-    // Start write
-    nack = neorv32_twi_trans((OLED_DISP_ADDRESS<<1)|0x00);
-    if(nack) {
-        neorv32_uart0_printf("[ERROR] OLED Display NACK on starting write transaction.\n");
-        return;
-    }
-    // Next byte is control byte
-    nack = neorv32_twi_trans(0x80);
-    if(nack) {
-        neorv32_uart0_printf("[ERROR] OLED Display NACK on command byte marker (0x80).\n");
-        return;
-    }
-    // Switch display ON
-    nack = neorv32_twi_trans(0xAF);
-    if(nack) {
-        neorv32_uart0_printf("[ERROR] OLED Display NACK on switch display on command (0xAF).\n");
-        return;
-    }
+
+    uint8_t data = (OLED_DISP_ADDRESS << 1);
+    int nack = neorv32_twi_trans(&data, 0);
+    if (nack)
+        return 1;
+
+    data = 0x80;
+    nack = neorv32_twi_trans(&data, 0);
+    if (nack)
+        return 2;
+
+    data = cmd;
+    nack = neorv32_twi_trans(&data, 0);
+    if (nack)
+        return 3;
     neorv32_twi_generate_stop();
+
+    return 0;
+}
+
+static void test_i2c_oled()
+{
+    /*
+     * Write two commands: set display on (0xAF) and then set entire display on (0xA5)
+     * https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
+     */
+    neorv32_uart0_printf("* I2C Test:\n");
+    neorv32_twi_setup(CLK_PRSC_2048, 15, 0);
+    int ret = oled_send_cmd(0xAF);
+    if (ret != 0)
+    {
+        neorv32_uart0_printf("  => Got NACK in CMD 0xAF stage %d\n  => [FAIL]\n");
+        return;
+    }
 
     neorv32_cpu_delay_ms(1);
+    ret = oled_send_cmd(0xA5);
+    if (ret != 0)
+    {
+        neorv32_uart0_printf("  => Got NACK in CMD 0xA5 stage %d\n  => [FAIL]\n");
+        return;
+    }
 
-    /** Switch entire display on (0xA5) */
-    neorv32_twi_generate_start();
-    // Start write
-    nack = neorv32_twi_trans((OLED_DISP_ADDRESS<<1)|0x00);
-    if(nack) {
-        neorv32_uart0_printf("[ERROR] OLED Display NACK on starting write transaction.\n");
-        return;
-    }
-    // Next byte is control byte
-    nack = neorv32_twi_trans(0x80);
-    if(nack) {
-        neorv32_uart0_printf("[ERROR] OLED Display NACK on command byte marker (0x80).\n");
-        return;
-    }
-    // Switch display ON
-    nack = neorv32_twi_trans(0xA5);
-    if(nack) {
-        neorv32_uart0_printf("[ERROR] OLED Display NACK on switch entire display on command (0xA5).\n");
-        return;
-    }
-    neorv32_twi_generate_stop();
+    neorv32_uart0_printf("  => [OK]\n");
 }
 
-/**********************************************************************//**
- * Helper function to convert N hex chars string into uint32_T
- *
- * @param[in,out] buffer Pointer to array of chars to convert into number.
- * @param[in,out] length Length of the conversion string.
- * @return Converted number.
- **************************************************************************/
-uint32_t hexstr_to_uint(char *buffer, uint8_t length) {
+const size_t sin_buf_len = 90;
+static int32_t sin_buf[90] = { 
+    0x000000, 0x08edc7, 0x11d06c, 0x1a9cd9, 0x234815, 0x2bc750, 
+    0x340ff1, 0x3c17a4, 0x43d464, 0x4b3c8b, 0x5246dc, 0x58ea90, 
+    0x5f1f5d, 0x64dd88, 0x6a1de6, 0x6ed9ea, 0x730bae, 0x76adf4, 
+    0x79bc37, 0x7c32a5, 0x7e0e2d, 0x7f4c7d, 0x7fec08, 0x7fec08, 
+    0x7f4c7d, 0x7e0e2d, 0x7c32a5, 0x79bc37, 0x76adf4, 0x730bae, 
+    0x6ed9ea, 0x6a1de6, 0x64dd88, 0x5f1f5d, 0x58ea90, 0x5246dc, 
+    0x4b3c8b, 0x43d464, 0x3c17a4, 0x340ff1, 0x2bc750, 0x234815, 
+    0x1a9cd9, 0x11d06c, 0x08edc7, 0x000000, 0xf71239, 0xee2f94, 
+    0xe56327, 0xdcb7eb, 0xd438b0, 0xcbf00f, 0xc3e85c, 0xbc2b9c, 
+    0xb4c375, 0xadb924, 0xa71570, 0xa0e0a3, 0x9b2278, 0x95e21a, 
+    0x912616, 0x8cf452, 0x89520c, 0x8643c9, 0x83cd5b, 0x81f1d3, 
+    0x80b383, 0x8013f8, 0x8013f8, 0x80b383, 0x81f1d3, 0x83cd5b, 
+    0x8643c9, 0x89520c, 0x8cf452, 0x912616, 0x95e21a, 0x9b2278, 
+    0xa0e0a3, 0xa71570, 0xadb924, 0xb4c375, 0xbc2b9c, 0xc3e85c, 
+    0xcbf00f, 0xd438b0, 0xdcb7eb, 0xe56327, 0xee2f94, 0xf71239 };
 
-  uint32_t res = 0, d = 0;
-  char c = 0;
+static void play_audio()
+{
+    uint64_t timeout = neorv32_clint_time_get() + (uint64_t)(5 * NEORV32_SYSINFO->CLK);
+    while (neorv32_clint_time_get() < timeout)
+    {
+        for (size_t i = 0; i < sin_buf_len; i++)
+        {
+            // Wait till there's space in the FIFO
+            while (I2S_REG_STAT0 & STAT0_FIFO_FULL) {}
 
-  while (length--) {
-    c = *buffer++;
+            I2S_REG_AUDIOL = sin_buf[i];
+            I2S_REG_AUDIOR = sin_buf[i] | AUDIO_COMMIT;
+        }
+    }
+}
 
-    if ((c >= '0') && (c <= '9'))
-      d = (uint32_t)(c - '0');
-    else if ((c >= 'a') && (c <= 'f'))
-      d = (uint32_t)((c - 'a') + 10);
-    else if ((c >= 'A') && (c <= 'F'))
-      d = (uint32_t)((c - 'A') + 10);
+static void test_dac()
+{
+    neorv32_uart0_printf("* DAC Test:\n  => Playing five seconds of audio \n");
+
+    I2S_REG_CTRL0 = CTRL0_RST | CTRL0_DAC_BUILTIN | CTRL0_DAC_EN;
+    I2S_REG_CTRL0 &= ~(CTRL0_RST | CTRL0_I2S_EN);
+    play_audio();
+    I2S_REG_CTRL0 = 0;
+    
+    neorv32_uart0_printf("  => [DONE]\n");
+}
+
+static void test_i2s()
+{
+    neorv32_uart0_printf("* I2S Test:\n  => Playing five seconds of audio \n");
+
+    I2S_REG_CTRL0 = CTRL0_RST | CTRL0_I2S_EN;
+    I2S_REG_CTRL0 &= ~(CTRL0_RST | CTRL0_DAC_BUILTIN | CTRL0_DAC_EN);
+    play_audio();
+    I2S_REG_CTRL0 = 0;
+
+    neorv32_uart0_printf("  => [DONE]\n");
+}
+
+static void test_jtag()
+{
+    neorv32_uart0_printf("* JTAG Test:\n  => Can't test here, test using OpenOCD instead\n  => [SKIPPED]\n");
+}
+
+static void test_oscillator()
+{
+    neorv32_uart0_printf("* External Oscillator Test:\n  => SoC is running, assuming fine\n  => [OK]\n");
+}
+
+static void test_xip_flash()
+{
+    void *pc;
+    __asm__ volatile (
+        "auipc %0, 0"
+        : "=r"(pc)
+    );
+
+    if (((uint32_t)pc & 0xF0000000) == 0xE0000000)
+        neorv32_uart0_printf("* XIP Flash Test:\n  => Code is running from XIP (pc = %p)\n  => [OK]\n", pc);
     else
-      d = 0;
-
-    res = res + (d << (length*4));
-  }
-
-  return res;
+        neorv32_uart0_printf("* XIP Flash Test:\n  => Code is not running from XIP (pc = %p)\n  => [FAIL]\n", pc);
 }
 
+int main()
+{
+    psoc_board_setup(true);
+    neorv32_rte_setup();
 
-/**********************************************************************//**
- * Print HEX byte.
- *
- * @param[in] byte Byte to be printed as 2-cahr hex value.
- **************************************************************************/
-void aux_print_hex_byte(uint8_t byte) {
+    neorv32_uart0_printf("\n\n#=========================================================#\n");
+    neorv32_uart0_printf("#                    PSoC Board Test                      #\n");
+    neorv32_uart0_printf("#=========================================================#\n\n\n");
 
-  static const char symbols[] = "0123456789abcdef";
+    test_oscillator();
+    test_xip_flash();
+    test_jtag();
+    test_i2c_oled();
+    test_sd_card();
+    test_led();
+    test_i2s();
+    test_dac();
+    test_uart();
+    test_buttons();
+    test_rst_button();
 
-  neorv32_uart0_putc(symbols[(byte >> 4) & 0x0f]);
-  neorv32_uart0_putc(symbols[(byte >> 0) & 0x0f]);
+    while (true) {}
+    return 0;
 }
