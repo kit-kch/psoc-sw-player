@@ -2,25 +2,6 @@
 #include <neorv32.h>
 #include "psoc_board.h"
 
-/**
- * Checks button click condition 
- */
-bool check_button_clicked(int pin){
-    static bool pressed;
-
-    if(pressed){
-        if(!neorv32_gpio_pin_get(pin)){
-            pressed = false;
-            return true;
-        }
-    } else {
-        if(neorv32_gpio_pin_get(pin))
-            pressed = true;
-    }
-    return false;
-}
-
-
 static void test_rst_button()
 {
     neorv32_uart0_printf("* SW2 Button Test:\n");
