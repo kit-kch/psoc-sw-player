@@ -23,7 +23,7 @@ bool check_button_clicked(int pin){
 
 static void test_rst_button()
 {
-    neorv32_uart0_printf("* SW Button Test:\n");
+    neorv32_uart0_printf("* SW2 Button Test:\n");
     neorv32_uart0_printf("  => Press SW2 now. It's working if the SoC resets\n");
 }
 
