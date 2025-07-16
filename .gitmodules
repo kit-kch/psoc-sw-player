@@ -1,0 +1,6 @@
+[submodule "ext/psoc-sw-lib"]
+	path = ext/psoc-sw-lib
+	url = https://github.com/kit-kch/psoc-sw-lib.git
+[submodule "ext/neorv32"]
+	path = ext/neorv32
+	url = https://github.com/kit-kch/psoc-neorv32.git
