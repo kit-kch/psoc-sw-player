@@ -1,0 +1,29 @@
+default:
+  image:
+    name: gitlab.itiv.kit.edu:1443/itiv/docker/itiv-rocky8:latest
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+stages:
+ - compile
+ - upload
+
+compile:boardtest:
+  stage: compile
+  script:
+    - source /tools/psoc/psoc.sh riscv && make elf
+  artifacts:
+    paths:
+    - main.elf
+
+upload:all:
+  stage: upload
+  needs:
+   - job: "compile:boardtest"
+     artifacts: true
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - echo "Upload firmware"
+    - 'curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "main.elf" "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/firmware/${CI_COMMIT_TAG}/boardtest.elf"'
