@@ -4,3 +4,9 @@
 [submodule "ext/neorv32"]
 	path = ext/neorv32
 	url = https://github.com/kit-kch/psoc-neorv32.git
+[submodule "ext/psoc-sw-adafruit-gfx"]
+	path = ext/psoc-sw-adafruit-gfx
+	url = https://github.com/kit-kch/psoc-sw-adafruit-gfx.git
+[submodule "ext/psoc-sw-adafruit-ssd1306"]
+	path = ext/psoc-sw-adafruit-ssd1306
+	url = https://github.com/kit-kch/psoc-sw-adafruit-ssd1306.git
