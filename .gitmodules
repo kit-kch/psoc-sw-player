@@ -10,3 +10,6 @@
 [submodule "ext/psoc-sw-adafruit-ssd1306"]
 	path = ext/psoc-sw-adafruit-ssd1306
 	url = https://github.com/kit-kch/psoc-sw-adafruit-ssd1306.git
+[submodule "ext/psoc-sw-arduino-wire"]
+	path = ext/psoc-sw-arduino-wire
+	url = https://github.com/kit-kch/psoc-sw-arduino-wire.git
