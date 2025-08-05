@@ -1,6 +1,6 @@
-# PSoC FMC PCB (psoc-pcb-fmc) Boardtest
+# PSoC OLED Display Test
 
-This repository contains a small firmware to test the PSoC extension PCB.
+This repository contains a small firmware to test the OLED Display on the PSoC extension PCB.
 
 ## Compiling the Software
 
