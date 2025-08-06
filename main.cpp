@@ -6,6 +6,7 @@
 
 #include <neorv32.h>
 #include "psoc_board.h"
+#include "splash.h"
 
 
 /**************************************************************************
@@ -378,9 +379,9 @@ void setup() {
   }
 
   // Show initial display buffer contents on the screen --
-  // the library initializes this with an Adafruit splash screen.
+  display.drawBitmap(0, 0, psoc_splash_data, psoc_splash_width, psoc_splash_height, 1);
   display.display();
-  delay(2000); // Pause for 2 seconds
+  delay(5000); // Pause for 5 seconds
 
   // Clear the buffer
   display.clearDisplay();
@@ -437,9 +438,10 @@ extern "C" int main()
     psoc_board_setup(true);
     neorv32_rte_setup();
 
-    neorv32_uart0_printf("\n\n#=========================================================#\n");
-    neorv32_uart0_printf("#                     PSoC OLED Test                      #\n");
-    neorv32_uart0_printf("#=========================================================#\n\n\n");
+    neorv32_uart0_printf("\n\n");
+    neorv32_uart0_printf("#===========================================================================#\n");
+    neorv32_uart0_printf("#                              PSoC OLED Test                               #\n");
+    neorv32_uart0_printf("#===========================================================================#\n");
 
     setup();
 

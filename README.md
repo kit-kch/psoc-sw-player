@@ -16,4 +16,15 @@ make elf
 make clean_all
 ```
 
+To rebuild the `splash.h` file from `splash.png`:
+```bash
+# Make sure that the png does not have an alpha channel:
+convert splash_in.png -alpha off splash.png
+
+python -m venv .venv
+source .venv/bin/activate
+pip install pillow
+./ext/psoc-sw-adafruit-ssd1306/scripts/make_splash.py splash.png psoc_splash > splash.h
+```
+
 For flashing, refer to the [psoc-soc instructions](https://github.com/kit-kch/psoc-soc/).
