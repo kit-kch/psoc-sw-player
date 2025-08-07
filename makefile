@@ -8,8 +8,10 @@ APP_SRC = $(wildcard ./source/*.c) $(wildcard ./source/*.s) $(wildcard ./source/
 APP_INC += -I ./include
 
 CXXFLAGS = -fno-exceptions -fno-rtti -fno-use-cxa-atexit -fno-threadsafe-statics
+LDFLAGS = -lstdc++ -lsupc++
 USER_FLAGS = -Wl,--defsym,__neorv32_rom_size=256K -Wl,--defsym,__neorv32_ram_size=16K -Wl,--defsym,__neorv32_heap_size=8K -D SSD1306_NO_SPLASH
 
+APP_INC += -I ./ext/etl/include
 include $(PSOC_LIB_HOME)/psoc_lib.mk
 include $(PSOC_WIRE_HOME)/neorv_lib.mk
 include $(ADAFRUIT_GFX_HOME)/neorv_lib.mk
