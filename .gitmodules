@@ -13,3 +13,6 @@
 [submodule "ext/psoc-sw-arduino-wire"]
 	path = ext/psoc-sw-arduino-wire
 	url = https://github.com/kit-kch/psoc-sw-arduino-wire.git
+[submodule "ext/etl"]
+	path = ext/etl
+	url = https://github.com/ETLCPP/etl.git
