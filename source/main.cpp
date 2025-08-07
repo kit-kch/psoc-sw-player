@@ -13,7 +13,7 @@ extern "C" int main()
 
     neorv32_uart0_printf("\n\n");
     neorv32_uart0_printf("#===========================================================================#\n");
-    neorv32_uart0_printf("#                              PSoC OLED Test                               #\n");
+    neorv32_uart0_printf("#                            PSoC Audio Player                              #\n");
     neorv32_uart0_printf("#===========================================================================#\n");
 
     psoc::Player player;
