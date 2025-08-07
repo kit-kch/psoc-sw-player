@@ -1,6 +1,6 @@
-# PSoC OLED Display Test
+# PSoC Audio Player Software
 
-This repository contains a small firmware to test the OLED Display on the PSoC extension PCB.
+This repository contains the PSoC reference audio player to be used with psoc-soc and the PSoC extension PCB.
 
 ## Compiling the Software
 
