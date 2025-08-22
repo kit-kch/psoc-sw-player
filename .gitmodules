@@ -16,3 +16,6 @@
 [submodule "ext/etl"]
 	path = ext/etl
 	url = https://github.com/ETLCPP/etl.git
+[submodule "ext/neosd"]
+	path = ext/neosd
+	url = git@github.com:jpf91/neosd.git
