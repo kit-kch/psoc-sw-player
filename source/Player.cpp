@@ -119,8 +119,8 @@ namespace psoc {
                         break;
                     }
                     neorv32_uart0_printf("Opening fest2019.s16 ok\n");
-
-                    auto size = f_tell(&_file);
+                    
+                    auto size = f_size(&_file);
                     neorv32_uart0_printf("File size is: %d\n", size);
 
                     msg = "Playing";
