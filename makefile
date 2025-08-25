@@ -18,6 +18,9 @@ USER_FLAGS = -Wl,--defsym,__neorv32_rom_size=256K -Wl,--defsym,__neorv32_ram_siz
 # Set base address of the NEOSD peripheral
 USER_FLAGS += -D 'NEOSD_BASE=(0xFFD20000U)'
 
+# Release build
+EFFORT = -O2
+
 APP_INC += -I ./ext/etl/include
 include $(PSOC_LIB_HOME)/psoc_lib.mk
 include $(PSOC_WIRE_HOME)/neorv_lib.mk
