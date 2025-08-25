@@ -8,6 +8,8 @@
 
 using etl::string, etl::istring;
 
+#define AUDIO_BUF_SIZE 128
+
 namespace psoc {
     enum class PlayerState
     {
@@ -28,13 +30,13 @@ namespace psoc {
         DIR _dir;
         uint32_t _buttonLast;
         size_t _audioIndex;
-        uint32_t _audioBuf[32];
+        uint32_t _audioBuf[AUDIO_BUF_SIZE];
         string<64> msg;
 
-        bool _playing;
+        volatile bool _playing;
         PlayerOutput _output;
-        size_t _samplesPlayed;
-        bool _fileFinished;
+        volatile size_t _samplesPlayed;
+        volatile bool _fileFinished;
 
         bool initSDCard();
         uint32_t buttonRising();
@@ -42,6 +44,8 @@ namespace psoc {
         bool openFile(const char* name);
         bool selectNextFile();
         void playAudio();
+
+        friend void gpio_interrupt_handler();
 
     public:
         void init();

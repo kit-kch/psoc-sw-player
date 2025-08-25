@@ -13,7 +13,7 @@ APP_INC += -I ./include
 
 CXXFLAGS = -fno-exceptions -fno-rtti -fno-use-cxa-atexit -fno-threadsafe-statics
 LDFLAGS = -lstdc++ -lsupc++
-USER_FLAGS = -Wl,--defsym,__neorv32_rom_size=256K -Wl,--defsym,__neorv32_ram_size=16K -Wl,--defsym,__neorv32_heap_size=2K -D SSD1306_NO_SPLASH
+USER_FLAGS = -Wl,--defsym,__neorv32_rom_size=256K -Wl,--defsym,__neorv32_ram_size=16K -Wl,--defsym,__neorv32_heap_size=1K -D SSD1306_NO_SPLASH
 
 # Set base address of the NEOSD peripheral
 USER_FLAGS += -D 'NEOSD_BASE=(0xFFD20000U)'

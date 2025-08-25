@@ -6,12 +6,20 @@
 #include <neosd.h>
 #include <ff.h>
 
-static uint64_t neorv32_clint_time_get_ms()
-{
-    return (neorv32_clint_time_get() / ((uint64_t)neorv32_sysinfo_get_clk()))*1000;
-}
-
 namespace psoc {
+
+    Player* gPlayer;
+    // Only using this for the audio fifo low pin, so no need to check source
+    void gpio_interrupt_handler()
+    {
+        neorv32_gpio_irq_clr(neorv32_gpio_irq_get());
+        gPlayer->playAudio();
+    }
+
+    static uint64_t neorv32_clint_time_get_ms()
+    {
+        return (neorv32_clint_time_get() / ((uint64_t)neorv32_sysinfo_get_clk()))*1000;
+    }
 
     static void queueAudioS16(int16_t left, int16_t right)
     {
@@ -77,8 +85,27 @@ namespace psoc {
         }
     }
 
-    static void initI2S()
+    static void enableAudioInterrupt()
     {
+        //neorv32_cpu_csr_set(CSR_MIE, 1 << GPIO_FIRQ_ENABLE);
+        neorv32_gpio_irq_enable(1 << GPIO_I2S_IRQ);
+    }
+
+    static void disableAudioInterrupt()
+    {
+        //neorv32_cpu_csr_clr(CSR_MIE, 1 << GPIO_FIRQ_ENABLE);
+        neorv32_gpio_irq_disable(1 << GPIO_I2S_IRQ);
+    }
+
+    static void initAudio()
+    {
+        neorv32_rte_handler_install(GPIO_RTE_ID, gpio_interrupt_handler);
+        neorv32_cpu_csr_set(CSR_MIE, 1 << GPIO_FIRQ_ENABLE);
+        neorv32_cpu_csr_set(CSR_MSTATUS, 1 << CSR_MSTATUS_MIE);
+        neorv32_gpio_irq_setup(GPIO_I2S_IRQ, GPIO_TRIG_LEVEL_HIGH);
+        neorv32_gpio_irq_enable(1 << GPIO_I2S_IRQ);
+
+        I2S_REG_LOWT = 96;
         I2S_REG_CTRL0 = CTRL0_RST | CTRL0_I2S_EN;
         I2S_REG_CTRL0 = CTRL0_I2S_EN;
     }
@@ -141,6 +168,11 @@ namespace psoc {
         return true;
     }
 
+    // Note: this is called from gpio_interrupt_handler IRQ
+    // So we have to be a bit careful to mark some things volatile here..
+    // Note that reading the SD card in an interrupt is probably a really bad idea....
+    // But we don't use interrupts anywhere else and don't care if we stall the main programm for some time
+    // But audio really needs to be gapless
     void Player::playAudio()
     {
         if (!_playing)
@@ -156,11 +188,11 @@ namespace psoc {
         {
 
             // Refill the buffer
-            if (_audioIndex == 32)
+            if (_audioIndex == AUDIO_BUF_SIZE)
             {
-                _samplesPlayed += 32;
+                _samplesPlayed += AUDIO_BUF_SIZE;
                 UINT numRead;
-                if (f_read(&_file, &_audioBuf[0], 128, &numRead) != FR_OK)
+                if (f_read(&_file, &_audioBuf[0], AUDIO_BUF_SIZE*4, &numRead) != FR_OK)
                 {
                     msg = "Error reading file";
                     _display.showText(msg);
@@ -170,7 +202,7 @@ namespace psoc {
                 }
 
                 // EOF. Don't handle partial buffer, we're done
-                if (numRead < 128)
+                if (numRead < AUDIO_BUF_SIZE*4)
                 {
                     _playing = false;
                     _fileFinished = true;
@@ -187,10 +219,14 @@ namespace psoc {
 
     bool Player::openFile(const char* name)
     {
+        // So that fatfs does not get interrupted
+        disableAudioInterrupt();
+
         // Close old file if open
         if (_fileOpen && f_close(&_file) != FR_OK)
         {
             neorv32_uart0_printf("Closing file failed!\n", name);
+            enableAudioInterrupt();
             return false;
         }
         
@@ -199,6 +235,7 @@ namespace psoc {
         if (f_open(&_file, name, FA_OPEN_EXISTING | FA_READ) != FR_OK)
         {
             _fileOpen = true;
+            enableAudioInterrupt();
             return false;
         }
     
@@ -220,24 +257,34 @@ namespace psoc {
         _state = PlayerState::play;
         _fileOpen = true;
         _fileFinished = false;
+        enableAudioInterrupt();
         return true;
     }
 
     bool Player::selectNextFile()
     {
+        // So that fatfs does not get interrupted
+        disableAudioInterrupt();
+
         FILINFO finfo;
         bool rewound = false;
         while (true)
         {
             if(f_readdir(&_dir, &finfo) != FR_OK)
+            {
+                enableAudioInterrupt();
                 return false;
+            }
     
             // Already last file => start from 0 again
             if (finfo.fname[0] == 0)
             {
                 // No files....
                 if (rewound)
+                {
+                    enableAudioInterrupt();
                     return false;
+                }
                 rewound = true;
                 f_rewinddir(&_dir);
                 continue;
@@ -255,14 +302,17 @@ namespace psoc {
                 continue;
 
             msg = finfo.fname;
+            enableAudioInterrupt();
             return true;
         }
         // Not reachable
+        enableAudioInterrupt();
         return false;
     }
 
     void Player::init()
     {
+        gPlayer = this;
         _buttonLast = 0;
         _audioIndex = 32;
         _playing = false;
@@ -270,7 +320,7 @@ namespace psoc {
         _output = PlayerOutput::I2S;
         _state = PlayerState::splash;
         _display.init();
-        initI2S();
+        initAudio();
     }
 
     void Player::run()
@@ -359,7 +409,8 @@ namespace psoc {
                         break;
                     }
 
-                    playAudio();
+                    // In IRQ-less version. Otherwise this is called by IRQ
+                    // playAudio();
                     if (_fileFinished)
                     {
                         neorv32_uart0_printf("End of file. Playing next file....\n");
