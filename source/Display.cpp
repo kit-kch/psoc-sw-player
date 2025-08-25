@@ -48,7 +48,7 @@ namespace psoc {
             case DisplayMode::splash:
             {
                 _display.clearDisplay();
-                //_display.drawBitmap(0, 0, psoc_splash_data, psoc_splash_width, psoc_splash_height, 1);
+                _display.drawBitmap(0, 0, psoc_splash_data, psoc_splash_width, psoc_splash_height, 1);
                 break;
             }
             case DisplayMode::text:
