@@ -28,3 +28,20 @@ pip install pillow
 ```
 
 For flashing, refer to the [psoc-soc instructions](https://github.com/kit-kch/psoc-soc/).
+
+## Generating Sound Files
+
+The player currently only plays raw 48kHz, 16 bit signed `.s16` files.
+To convert an audio file to this format, use ffmpeg like this:
+
+```bash
+ffmpeg -i fest2019.mp3 -acodec pcm_s16le -ac 2 -ar 48000 -f s16le fest2019.s16
+```
+
+To generate sine waves for testing, you can use something like this:
+```bash
+ffmpeg -f lavfi -i "sine=frequency=400:duration=30:sample_rate=48000" \
+       -f lavfi -i "sine=frequency=800:duration=30:sample_rate=48000" \
+       -filter_complex "[0:a][1:a]join=inputs=2:channel_layout=stereo[aout];[aout]volume=15dB[aout2]" \
+       -map "[aout2]" -acodec pcm_s16le -ac 2 -ar 48000 -f s16le sine.s16
+```
