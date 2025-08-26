@@ -345,7 +345,7 @@ namespace psoc {
                 {
                     if (!initSDCard())
                     {
-                        msg = "SD Card Fail";
+                        msg = "SD init failed!";
                         _display.showText(msg);
                         _state = PlayerState::errorSD;
                         break;
@@ -354,7 +354,7 @@ namespace psoc {
                     neorv32_uart0_printf("Mounting SD card\n");
                     if (f_mount(&_fs, "", 1) != FR_OK)
                     {
-                        msg = "Mounting FS failed";
+                        msg = "Mounting FAT failed!";
                         _display.showText(msg);
                         _state = PlayerState::errorSD;
                         neorv32_uart0_printf("  => failed\n");
