@@ -29,6 +29,7 @@ namespace psoc {
     bool Display::init()
     {
         _display = Adafruit_SSD1306(DISPLAY_WIDTH, DISPLAY_HEIGHT, &Wire, -1);
+        _display.setBuffer(&_displayBuffer[0]);
         _output = PlayerOutput::I2S;
         _samples = 0;
         _samplesTotal = 1;

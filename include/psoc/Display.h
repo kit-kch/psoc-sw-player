@@ -21,6 +21,7 @@ namespace psoc {
     class Display {
     private:
         Adafruit_SSD1306 _display;
+        uint8_t _displayBuffer[512];
         bool _needUpdate = true;
 
         string<64> _text;
