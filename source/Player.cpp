@@ -143,7 +143,8 @@ namespace psoc {
         }
         if (buttons & (1 << PSOC_BTN_L))
         {
-            neorv32_uart0_printf("Player::handleInputs: PSOC_BTN_L\n");
+            _loopFile = !_loopFile;
+            _display.setPlayerLoop(_loopFile);
         }
         if (buttons & (1 << PSOC_BTN_U))
         {
@@ -234,7 +235,7 @@ namespace psoc {
         neorv32_uart0_printf("Opening %s...\n", name);
         if (f_open(&_file, name, FA_OPEN_EXISTING | FA_READ) != FR_OK)
         {
-            _fileOpen = true;
+            neorv32_uart0_printf("  => failed\n");
             enableAudioInterrupt();
             return false;
         }
@@ -257,6 +258,28 @@ namespace psoc {
         _state = PlayerState::play;
         _fileOpen = true;
         _fileFinished = false;
+        enableAudioInterrupt();
+        return true;
+    }
+
+    bool Player::resetFile()
+    {
+        neorv32_uart0_printf("Resetting file...\n");
+        // So that fatfs does not get interrupted
+        disableAudioInterrupt();
+        if (f_rewind(&_file) != FR_OK)
+        {
+            neorv32_uart0_printf("  => failed\n");
+            enableAudioInterrupt();
+            return false;
+        }
+        neorv32_uart0_printf("  => ok\n");
+
+        _playing = true;
+        _fileFinished = false;
+        _samplesPlayed = 0;
+        _display.setPlayerSamples(0);
+
         enableAudioInterrupt();
         return true;
     }
@@ -317,6 +340,7 @@ namespace psoc {
         _audioIndex = 32;
         _playing = false;
         _fileOpen = false;
+        _loopFile = false;
         _output = PlayerOutput::I2S;
         _state = PlayerState::splash;
         _display.init();
@@ -410,22 +434,36 @@ namespace psoc {
                     // playAudio();
                     if (_fileFinished)
                     {
-                        neorv32_uart0_printf("End of file. Playing next file....\n");
-                        if (!selectNextFile())
+                        neorv32_uart0_printf("End of file\n");
+                        if (_loopFile)
                         {
-                            neorv32_uart0_printf("  => failed. No files?\n");
-                            msg = "No file found!";
-                            _display.showText(msg);
-                            _state = PlayerState::errorSD;
-                            break;
+                            if (!resetFile())
+                            {
+                                msg = "File read failed!";
+                                _display.showText(msg);
+                                _state = PlayerState::errorSD;
+                                break;
+                            }
                         }
-
-                        if (!openFile(msg.c_str()))
+                        else
                         {
-                            msg = "Opening file failed!";
-                            _display.showText(msg);
-                            _state = PlayerState::errorSD;
-                            break;
+                           
+                            if (!selectNextFile())
+                            {
+                                neorv32_uart0_printf("  => failed. No files?\n");
+                                msg = "No file found!";
+                                _display.showText(msg);
+                                _state = PlayerState::errorSD;
+                                break;
+                            }
+
+                            if (!openFile(msg.c_str()))
+                            {
+                                msg = "Opening file failed!";
+                                _display.showText(msg);
+                                _state = PlayerState::errorSD;
+                                break;
+                            }
                         }
                     }
 

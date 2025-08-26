@@ -33,6 +33,7 @@ namespace psoc {
         _samples = 0;
         _samplesTotal = 1;
         _playing = false;
+        _loopFile = false;
         _text = "";
         _mode = DisplayMode::splash;
         return _display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_ADDRESS);
@@ -72,6 +73,7 @@ namespace psoc {
             {
                 _display.clearDisplay();
 
+                // PSOC Logo
                 _display.setTextSize(1);
                 _display.setTextColor(SSD1306_WHITE);
                 _display.setCursor(0, 0);
@@ -80,8 +82,13 @@ namespace psoc {
                 _display.write('o');
                 _display.write('C');
 
+                // Replay indicator
+                size_t loopLeft = 127 - 4*FONT_WIDTH-2-11;
+                if (_loopFile)
+                    _display.drawRect(loopLeft, 1, 8, 5, SSD1306_WHITE);
+
+                // Play / Pause Indicator
                 size_t playStateLeft = 127 - 4*FONT_WIDTH-2;
-                // TODO: Use Bitmap instead?
                 if (_playing)
                 {
                     _display.fillTriangle(playStateLeft, 0, playStateLeft, 6, playStateLeft + 4, 3, SSD1306_WHITE);
@@ -92,6 +99,7 @@ namespace psoc {
                     _display.fillRect(playStateLeft+3, 0, 2, 7, SSD1306_WHITE);
                 }
 
+                // I2S/DAC Mode
                 _display.setCursor(127 - 3*FONT_WIDTH, 0);
                 if (_output == PlayerOutput::I2S)
                 {
@@ -106,12 +114,13 @@ namespace psoc {
                     _display.write('C');
                 }
 
+                // File name
                 _display.setCursor(0, 15);
                 size_t titleMax = _text.length() < 12 ? _text.length() : 12;
                 for (size_t i = 0; i < titleMax; i++)
                     _display.write(_text[i]);
 
-                // Print the playing time / time left
+                // Playing time
                 size_t playTimeLeft = 128 - 5*FONT_WIDTH;
                 _display.setCursor(playTimeLeft, 15);
                 size_t mins, secs;

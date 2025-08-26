@@ -27,6 +27,7 @@ namespace psoc {
         FATFS _fs;
         FIL _file;
         bool _fileOpen;
+        bool _loopFile;
         DIR _dir;
         uint32_t _buttonLast;
         size_t _audioIndex;
@@ -42,6 +43,7 @@ namespace psoc {
         uint32_t buttonRising();
         bool handleInputs();
         bool openFile(const char* name);
+        bool resetFile();
         bool selectNextFile();
         void playAudio();
 
