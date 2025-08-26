@@ -17,6 +17,7 @@ USER_FLAGS = -Wl,--defsym,__neorv32_rom_size=256K -Wl,--defsym,__neorv32_ram_siz
 
 # Set base address of the NEOSD peripheral
 USER_FLAGS += -D 'NEOSD_BASE=(0xFFD20000U)'
+USER_FLAGS += -flto
 
 # Release build
 EFFORT = -O2
