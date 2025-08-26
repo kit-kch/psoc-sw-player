@@ -52,7 +52,7 @@ namespace psoc {
         friend void gpio_interrupt_handler();
 
     public:
-        void init();
+        bool init();
         void run();
     };
 };

@@ -343,7 +343,7 @@ namespace psoc {
         return false;
     }
 
-    void Player::init()
+    bool Player::init()
     {
         gPlayer = this;
         _buttonLast = 0;
@@ -355,8 +355,13 @@ namespace psoc {
         _volumeShift = 8;
         _output = PlayerOutput::I2S;
         _state = PlayerState::splash;
-        _display.init();
+        if (!_display.init())
+        {
+            neorv32_uart0_printf("Display::init failed!\n");
+            return false;
+        }
         initAudio();
+        return true;
     }
 
     void Player::run()

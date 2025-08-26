@@ -16,8 +16,11 @@ extern "C" int main()
     neorv32_uart0_printf("#                            PSoC Audio Player                              #\n");
     neorv32_uart0_printf("#===========================================================================#\n");
 
-    psoc::Player player;
-    player.init();
+    if (!player.init())
+    {
+        neorv32_uart0_printf("Player::init failed!\n");
+        return 0;
+    }
     player.run();
 
     return 0;
