@@ -21,13 +21,13 @@ namespace psoc {
         return (neorv32_clint_time_get() / ((uint64_t)neorv32_sysinfo_get_clk()))*1000;
     }
 
-    static void queueAudioS16(int16_t left, int16_t right)
+    static void queueAudioS16(int16_t left, int16_t right, uint8_t volumeShift)
     {
         // Sign extend to 32 bit
         int32_t left32 = ((int32_t)left) << 16;
-        left32 >>= 10;
+        left32 >>= volumeShift;
         int32_t right32 = ((int32_t)right) << 16;
-        right32 >>= 10;
+        right32 >>= volumeShift;
         // Audio data is actually 24 bit. Lower 24 bits are in correct format.
         // Top bits are ignored anyway, except for commit, which must be cleared.
         I2S_REG_AUDIOL = left32 & ~AUDIO_COMMIT;
@@ -148,11 +148,21 @@ namespace psoc {
         }
         if (buttons & (1 << PSOC_BTN_U))
         {
-            neorv32_uart0_printf("Player::handleInputs: PSOC_BTN_U\n");
+            if (_volume < 16)
+            {
+                _volume++;
+                _display.setPlayerVolume(_volume);
+                _volumeShift = 15 - _volume;
+            }
         }
         if (buttons & (1 << PSOC_BTN_D))
         {
-            neorv32_uart0_printf("Player::handleInputs: PSOC_BTN_D\n");
+            if (_volume > 0)
+            {
+                _volume--;
+                _display.setPlayerVolume(_volume);
+                _volumeShift = 15 - _volume;
+            }
         }
         if (buttons & (1 << PSOC_BTN_R))
         {
@@ -180,7 +190,7 @@ namespace psoc {
         {
             while (!(I2S_REG_STAT0 & STAT0_FIFO_FULL))
             {
-                queueAudioS16(0, 0);
+                queueAudioS16(0, 0, _volumeShift);
             }
             return;
         }
@@ -213,7 +223,7 @@ namespace psoc {
                 _audioIndex = 0;
             }
 
-            queueAudioS16(_audioBuf[_audioIndex] & 0xFFFF, _audioBuf[_audioIndex] >> 16);
+            queueAudioS16(_audioBuf[_audioIndex] & 0xFFFF, _audioBuf[_audioIndex] >> 16, _volumeShift);
             _audioIndex++;
         }
     }
@@ -341,6 +351,8 @@ namespace psoc {
         _playing = false;
         _fileOpen = false;
         _loopFile = false;
+        _volume = 7;
+        _volumeShift = 8;
         _output = PlayerOutput::I2S;
         _state = PlayerState::splash;
         _display.init();

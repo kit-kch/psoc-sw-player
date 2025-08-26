@@ -32,8 +32,10 @@ namespace psoc {
         uint32_t _buttonLast;
         size_t _audioIndex;
         uint32_t _audioBuf[AUDIO_BUF_SIZE];
+        uint8_t _volume;
         string<64> msg;
 
+        volatile uint8_t _volumeShift;
         volatile bool _playing;
         PlayerOutput _output;
         volatile size_t _samplesPlayed;

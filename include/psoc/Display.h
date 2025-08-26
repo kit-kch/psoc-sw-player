@@ -26,6 +26,7 @@ namespace psoc {
         string<64> _text;
         DisplayMode _mode;
         bool _playing;
+        uint8_t _volume;
         bool _loopFile;
         size_t _samplesTotal, _samples;
         PlayerOutput _output;
@@ -81,6 +82,12 @@ namespace psoc {
         void setPlayerLoop(bool loopFile)
         {
             _loopFile = loopFile;
+            _needUpdate = true;
+        }
+
+        void setPlayerVolume(uint8_t volume)
+        {
+            _volume = volume;
             _needUpdate = true;
         }
     };

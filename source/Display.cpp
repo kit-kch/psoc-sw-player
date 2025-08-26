@@ -33,6 +33,7 @@ namespace psoc {
         _samples = 0;
         _samplesTotal = 1;
         _playing = false;
+        _volume = 7;
         _loopFile = false;
         _text = "";
         _mode = DisplayMode::splash;
@@ -83,9 +84,13 @@ namespace psoc {
                 _display.write('C');
 
                 // Replay indicator
-                size_t loopLeft = 127 - 4*FONT_WIDTH-2-11;
+                size_t loopLeft = 127 - 4*FONT_WIDTH-2-20-11;
                 if (_loopFile)
                     _display.drawRect(loopLeft, 1, 8, 5, SSD1306_WHITE);
+
+                // Volume indicator
+                size_t volumeLeft = 127 - 4*FONT_WIDTH-2-20;
+                _display.fillRect(volumeLeft, 1, _volume, 5, SSD1306_WHITE);
 
                 // Play / Pause Indicator
                 size_t playStateLeft = 127 - 4*FONT_WIDTH-2;
