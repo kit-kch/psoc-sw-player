@@ -57,7 +57,11 @@ namespace psoc {
                 _display.setTextSize(1);
                 _display.setTextColor(SSD1306_WHITE);
 
-                _display.setCursor(0, DISPLAY_HEIGHT/2);
+                // Center the text
+                size_t offset = ((128/FONT_WIDTH) - _text.length()) * FONT_WIDTH/2;
+                if (offset > 128)
+                    offset = 0;
+                _display.setCursor(offset, DISPLAY_HEIGHT/2);
 
                 for (size_t i = 0; i < _text.length(); i++)
                     _display.write(_text[i]);
