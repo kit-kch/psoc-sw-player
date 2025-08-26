@@ -326,8 +326,6 @@ namespace psoc {
     void Player::run()
     {
         auto startTime = neorv32_clint_time_get_ms();
-        msg = "Initializing SD Card";
-
         neorv32_uart0_printf("Showing splash screen for 3s...\n");
         uint64_t displayTime = 0;
         while (true)
@@ -340,7 +338,6 @@ namespace psoc {
                     {
                         neorv32_uart0_printf("  => ok\n\n");
                         _state = PlayerState::initSD;
-                        _display.showText(msg);
                     }
                     break;
                 }
