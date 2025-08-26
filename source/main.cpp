@@ -6,6 +6,8 @@
 #include "psoc_board.h"
 #include "psoc/Player.h"
 
+psoc::Player player;
+
 extern "C" int main()
 {
     psoc_board_setup(true);
