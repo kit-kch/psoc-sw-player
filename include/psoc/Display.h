@@ -18,11 +18,17 @@ namespace psoc {
         DAC
     };
 
+    enum class DisplayUpdate {
+        none,
+        all,
+        playTime
+    };
+
     class Display {
     private:
         Adafruit_SSD1306 _display;
         uint8_t _displayBuffer[512];
-        bool _needUpdate = true;
+        DisplayUpdate _needUpdate;
 
         string<64> _text;
         DisplayMode _mode;
@@ -33,6 +39,8 @@ namespace psoc {
         PlayerOutput _output;
 
         void drawNumber(size_t val);
+        void renderPlayTime();
+        void renderPlayer();
 
     public:
         bool init();
@@ -41,55 +49,55 @@ namespace psoc {
         {
             _mode = DisplayMode::text;
             _text = text;
-            _needUpdate = true;
+            _needUpdate = DisplayUpdate::all;
         }
 
         void showPlayer()
         {
             _mode = DisplayMode::player;
-            _needUpdate = true;
+            _needUpdate = DisplayUpdate::all;
         }
 
         void setPlayerTitle(istring& text)
         {
             _text = text;
-            _needUpdate = true;
+            _needUpdate = DisplayUpdate::all;
         }
 
         void setPlayerOutput(PlayerOutput output)
         {
             _output = output;
-            _needUpdate = true;
+            _needUpdate = DisplayUpdate::all;
         }
 
         void setPlayerPlaying(bool playing)
         {
             _playing = playing;
-            _needUpdate = true;
+            _needUpdate = DisplayUpdate::all;
         }
 
         void setPlayerTotalSamples(size_t samples)
         {
             _samplesTotal = samples;
-            _needUpdate = true;
+            _needUpdate = DisplayUpdate::playTime;
         }
 
         void setPlayerSamples(size_t samples)
         {
             _samples = samples;
-            _needUpdate = true;
+            _needUpdate = DisplayUpdate::playTime;
         }
 
         void setPlayerLoop(bool loopFile)
         {
             _loopFile = loopFile;
-            _needUpdate = true;
+            _needUpdate = DisplayUpdate::all;
         }
 
         void setPlayerVolume(uint8_t volume)
         {
             _volume = volume;
-            _needUpdate = true;
+            _needUpdate = DisplayUpdate::all;
         }
     };
 };

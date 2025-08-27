@@ -26,6 +26,79 @@ namespace psoc {
         _display.write(d0 + '0');
     }
 
+    void Display::renderPlayTime()
+    {
+        // Playing time
+        size_t playTimeLeft = 128 - 5*FONT_WIDTH;
+        _display.setCursor(playTimeLeft, 15);
+        size_t mins, secs;
+        samplesToMS(_samples, mins, secs);
+        drawNumber(mins);
+        _display.write(':');
+        drawNumber(secs);
+
+        // Time progress bar
+        _display.drawRect(0, 28, 127, 4, SSD1306_WHITE);
+        size_t progress = (126 * _samples) / _samplesTotal;
+        _display.fillRect(1, 29, progress, 2, SSD1306_WHITE);
+    }
+
+    void Display::renderPlayer()
+    {
+        // PSOC Logo
+        _display.setTextSize(1);
+        _display.setTextColor(SSD1306_WHITE);
+        _display.setCursor(0, 0);
+        _display.write('P');
+        _display.write('S');
+        _display.write('o');
+        _display.write('C');
+
+        // Replay indicator
+        size_t loopLeft = 127 - 4*FONT_WIDTH-2-20-11;
+        if (_loopFile)
+            _display.drawRect(loopLeft, 1, 8, 5, SSD1306_WHITE);
+
+        // Volume indicator
+        size_t volumeLeft = 127 - 4*FONT_WIDTH-2-20;
+        _display.fillRect(volumeLeft, 1, _volume, 5, SSD1306_WHITE);
+
+        // Play / Pause Indicator
+        size_t playStateLeft = 127 - 4*FONT_WIDTH-2;
+        if (_playing)
+        {
+            _display.fillTriangle(playStateLeft, 0, playStateLeft, 6, playStateLeft + 4, 3, SSD1306_WHITE);
+        }
+        else
+        {
+            _display.fillRect(playStateLeft, 0, 2, 7, SSD1306_WHITE);
+            _display.fillRect(playStateLeft+3, 0, 2, 7, SSD1306_WHITE);
+        }
+
+        // I2S/DAC Mode
+        _display.setCursor(127 - 3*FONT_WIDTH, 0);
+        if (_output == PlayerOutput::I2S)
+        {
+            _display.write('I');
+            _display.write('2');
+            _display.write('S');
+        }
+        else
+        {
+            _display.write('D');
+            _display.write('A');
+            _display.write('C');
+        }
+
+        // File name
+        _display.setCursor(0, 15);
+        size_t titleMax = _text.length() < 12 ? _text.length() : 12;
+        for (size_t i = 0; i < titleMax; i++)
+            _display.write(_text[i]);
+
+        renderPlayTime();
+    }
+
     bool Display::init()
     {
         _display = Adafruit_SSD1306(DISPLAY_WIDTH, DISPLAY_HEIGHT, &Wire, -1);
@@ -38,12 +111,13 @@ namespace psoc {
         _loopFile = false;
         _text = "";
         _mode = DisplayMode::splash;
+        _needUpdate = DisplayUpdate::all;
         return _display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_ADDRESS);
     }
 
     void Display::update()
     {
-        if (!_needUpdate)
+        if (_needUpdate == DisplayUpdate::none)
             return;
 
         switch (_mode)
@@ -73,78 +147,31 @@ namespace psoc {
             }
             case DisplayMode::player:
             {
-                _display.clearDisplay();
-
-                // PSOC Logo
-                _display.setTextSize(1);
-                _display.setTextColor(SSD1306_WHITE);
-                _display.setCursor(0, 0);
-                _display.write('P');
-                _display.write('S');
-                _display.write('o');
-                _display.write('C');
-
-                // Replay indicator
-                size_t loopLeft = 127 - 4*FONT_WIDTH-2-20-11;
-                if (_loopFile)
-                    _display.drawRect(loopLeft, 1, 8, 5, SSD1306_WHITE);
-
-                // Volume indicator
-                size_t volumeLeft = 127 - 4*FONT_WIDTH-2-20;
-                _display.fillRect(volumeLeft, 1, _volume, 5, SSD1306_WHITE);
-
-                // Play / Pause Indicator
-                size_t playStateLeft = 127 - 4*FONT_WIDTH-2;
-                if (_playing)
+                switch (_needUpdate)
                 {
-                    _display.fillTriangle(playStateLeft, 0, playStateLeft, 6, playStateLeft + 4, 3, SSD1306_WHITE);
+                    case DisplayUpdate::none:
+                    {
+                        return;
+                    }
+                    case DisplayUpdate::playTime:
+                    {
+                        _display.fillRect(128 - 5*FONT_WIDTH, 15, 127, FONT_HEIGHT, SSD1306_BLACK);
+                        _display.fillRect(0, 28, 127, 4, SSD1306_BLACK);
+                        renderPlayTime();
+                        break;
+                    }
+                    case DisplayUpdate::all:
+                    {
+                        _display.clearDisplay();
+                        renderPlayer();
+                        break;
+                    }
                 }
-                else
-                {
-                    _display.fillRect(playStateLeft, 0, 2, 7, SSD1306_WHITE);
-                    _display.fillRect(playStateLeft+3, 0, 2, 7, SSD1306_WHITE);
-                }
-
-                // I2S/DAC Mode
-                _display.setCursor(127 - 3*FONT_WIDTH, 0);
-                if (_output == PlayerOutput::I2S)
-                {
-                    _display.write('I');
-                    _display.write('2');
-                    _display.write('S');
-                }
-                else
-                {
-                    _display.write('D');
-                    _display.write('A');
-                    _display.write('C');
-                }
-
-                // File name
-                _display.setCursor(0, 15);
-                size_t titleMax = _text.length() < 12 ? _text.length() : 12;
-                for (size_t i = 0; i < titleMax; i++)
-                    _display.write(_text[i]);
-
-                // Playing time
-                size_t playTimeLeft = 128 - 5*FONT_WIDTH;
-                _display.setCursor(playTimeLeft, 15);
-                size_t mins, secs;
-                samplesToMS(_samples, mins, secs);
-                drawNumber(mins);
-                _display.write(':');
-                drawNumber(secs);
-
-                // Time progress bar
-                _display.drawRect(0, 28, 127, 4, SSD1306_WHITE);
-                size_t progress = (126 * _samples) / _samplesTotal;
-                _display.fillRect(1, 29, progress, 2, SSD1306_WHITE);
-
                 break;
             }
         }
 
         _display.display();
-        _needUpdate = false;
+        _needUpdate = DisplayUpdate::none;
     }
 }
