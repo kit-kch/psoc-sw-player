@@ -39,7 +39,7 @@ namespace psoc {
 
         // Time progress bar
         _display.drawRect(0, 28, 127, 4, SSD1306_WHITE);
-        size_t progress = (126 * _samples) / _samplesTotal;
+        size_t progress = _samples / _samplesTotal;
         _display.fillRect(1, 29, progress, 2, SSD1306_WHITE);
     }
 

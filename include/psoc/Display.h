@@ -78,7 +78,8 @@ namespace psoc {
 
         void setPlayerTotalSamples(size_t samples)
         {
-            _samplesTotal = samples;
+            // Scale the samples here, so we only have to do it once
+            _samplesTotal = samples / 126;
             _needUpdate = DisplayUpdate::playTime;
         }
 
