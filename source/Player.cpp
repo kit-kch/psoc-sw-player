@@ -37,7 +37,13 @@ namespace psoc {
     bool Player::initSDCard()
     {
         neorv32_uart0_printf("Initializing NEOSD controller\n");
-        neosd_setup(CLK_PRSC_1024, 0, 0);
+        neosd_version_t ver;
+        if (!neosd_setup(CLK_PRSC_1024, 0, &ver))
+        {
+            neorv32_uart0_printf("  => failed\n\n");
+            return false;
+        }
+        neorv32_uart0_printf("  => hardware revision v%d.%d.%d\n", ver.major, ver.minor, ver.patch);
         neorv32_uart0_printf("  => ok\n\n");
 
         neorv32_uart0_printf("Initializing SD card\n");
@@ -64,7 +70,7 @@ namespace psoc {
 
                 // Fast clock for data transfer
                 neorv32_uart0_printf("Increasing SD clock\n");
-                neosd_set_clock_div(CLK_PRSC_2, 0);
+                neosd_set_clock(CLK_PRSC_2, 0, false);
                 neorv32_uart0_printf("  => ok\n\n");
 
                 return true;
