@@ -2,6 +2,8 @@
 
 This repository contains the PSoC reference audio player to be used with psoc-soc and the PSoC extension PCB.
 
+![Player Software Running on PSoC FMC PCB](psoc_player.jpg)
+
 ## Compiling the Software
 
 Make sure to setup the compiler first. The currently tested version is [xPack GNU RISC-V Embedded GCC v14.2.0-3](https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/tag/v14.2.0-3).
